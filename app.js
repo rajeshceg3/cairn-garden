@@ -270,7 +270,7 @@
     var sr = 22050;
     var o = new OfflineAudioContext(1, Math.ceil(seconds * sr), sr);
     var g2 = buildGraph(o);
-    g2.master.gain.value = 0.9;
+    g2.master.gain.value = 0.75;
     if (kind === 'knock') {
       knockAt(o, g2.master, 0.15, 0.85);
       knockAt(o, g2.master, 0.9, 0.4);
@@ -329,7 +329,7 @@
     if (on) {
       initAudio();
       if (AC && AC.state === 'suspended') AC.resume();
-      if (master) master.gain.setTargetAtTime(0.9, AC.currentTime, 0.4);
+      if (master) master.gain.setTargetAtTime(0.75, AC.currentTime, 0.4);
     } else if (master && AC) {
       master.gain.setTargetAtTime(0, AC.currentTime, 0.15);
     }
