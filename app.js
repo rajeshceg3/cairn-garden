@@ -180,40 +180,44 @@
 
   // ---------- audio ----------
   var AC = null, master = null, bowlGain = null, bowlOscs = [], droneNodes = [], soundOn = false;
+  // one graph builder feeds both the live context and the offline render probe,
+  // so captured output is the real production mix
+  function buildGraph(ctx2) {
+    var g2 = {};
+    g2.master = ctx2.createGain(); g2.master.gain.value = 0; g2.master.connect(ctx2.destination);
+    // singing bowl: fundamental + inharmonic partials, always running, gated by bowlGain
+    g2.bowl = ctx2.createGain(); g2.bowl.gain.value = 0; g2.bowl.connect(g2.master);
+    [[196.0, 1.0], [196.0 * 2.72, 0.38], [196.0 * 5.41, 0.13]].forEach(function (p) {
+      var o = ctx2.createOscillator(); o.type = 'sine'; o.frequency.value = p[0];
+      var og = ctx2.createGain(); og.gain.value = p[1];
+      o.connect(og); og.connect(g2.bowl); o.start();
+    });
+    // ambient drone: two low detuned sines + soft wind noise
+    var dg = ctx2.createGain(); dg.gain.value = 0.05; dg.connect(g2.master);
+    [[65.41, 1], [98.0, 0.7], [65.41 * 1.005, 0.5]].forEach(function (p) {
+      var o = ctx2.createOscillator(); o.type = 'sine'; o.frequency.value = p[0];
+      var og = ctx2.createGain(); og.gain.value = p[1] * 0.5;
+      o.connect(og); og.connect(dg); o.start();
+    });
+    var lfo = ctx2.createOscillator(); lfo.frequency.value = 0.07;
+    var lfoG = ctx2.createGain(); lfoG.gain.value = 0.02;
+    lfo.connect(lfoG); lfoG.connect(dg.gain); lfo.start();
+    var noiseBuf = ctx2.createBuffer(1, ctx2.sampleRate * 2, ctx2.sampleRate);
+    var d = noiseBuf.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    var noise = ctx2.createBufferSource(); noise.buffer = noiseBuf; noise.loop = true;
+    var nf = ctx2.createBiquadFilter(); nf.type = 'lowpass'; nf.frequency.value = 320; nf.Q.value = 0.4;
+    var ng = ctx2.createGain(); ng.gain.value = 0.012;
+    noise.connect(nf); nf.connect(ng); ng.connect(g2.master); noise.start();
+    return g2;
+  }
   function initAudio() {
     if (AC) return;
     var Ctor = window.AudioContext || window.webkitAudioContext;
     if (!Ctor) return;
     AC = new Ctor();
-    master = AC.createGain(); master.gain.value = 0; master.connect(AC.destination);
-    // singing bowl: fundamental + inharmonic partials, always running, gated by bowlGain
-    bowlGain = AC.createGain(); bowlGain.gain.value = 0; bowlGain.connect(master);
-    [[196.0, 1.0], [196.0 * 2.72, 0.38], [196.0 * 5.41, 0.13]].forEach(function (p) {
-      var o = AC.createOscillator(); o.type = 'sine'; o.frequency.value = p[0];
-      var g = AC.createGain(); g.gain.value = p[1];
-      o.connect(g); g.connect(bowlGain); o.start();
-      bowlOscs.push(o);
-    });
-    // ambient drone: two low detuned sines + soft wind noise
-    var dg = AC.createGain(); dg.gain.value = 0.05; dg.connect(master);
-    [[65.41, 1], [98.0, 0.7], [65.41 * 1.005, 0.5]].forEach(function (p) {
-      var o = AC.createOscillator(); o.type = 'sine'; o.frequency.value = p[0];
-      var g = AC.createGain(); g.gain.value = p[1] * 0.5;
-      o.connect(g); g.connect(dg); o.start();
-      droneNodes.push(o);
-    });
-    var lfo = AC.createOscillator(); lfo.frequency.value = 0.07;
-    var lfoG = AC.createGain(); lfoG.gain.value = 0.02;
-    lfo.connect(lfoG); lfoG.connect(dg.gain); lfo.start();
-    droneNodes.push(lfo);
-    var noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
-    var d = noiseBuf.getChannelData(0);
-    for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    var noise = AC.createBufferSource(); noise.buffer = noiseBuf; noise.loop = true;
-    var nf = AC.createBiquadFilter(); nf.type = 'lowpass'; nf.frequency.value = 320; nf.Q.value = 0.4;
-    var ng = AC.createGain(); ng.gain.value = 0.012;
-    noise.connect(nf); nf.connect(ng); ng.connect(master); noise.start();
-    droneNodes.push(noise);
+    var g2 = buildGraph(AC);
+    master = g2.master; bowlGain = g2.bowl;
     scheduleBird();
   }
   function scheduleBird() {
@@ -240,25 +244,59 @@
       o.start(t0); o.stop(t0 + 0.13);
     }
   }
-  function knock(strength) {
-    if (!AC || !soundOn) return;
-    var t = AC.currentTime;
-    var o = AC.createOscillator(); o.type = 'sine';
+  function knockAt(ctx2, dest, t, strength) {
+    var o = ctx2.createOscillator(); o.type = 'sine';
     o.frequency.setValueAtTime(88 + Math.random() * 22, t);
-    var g = AC.createGain();
+    var g = ctx2.createGain();
     var v = Math.min(0.5, 0.06 + strength * 0.4);
     g.gain.setValueAtTime(v, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
-    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.16);
+    o.connect(g); g.connect(dest); o.start(t); o.stop(t + 0.16);
     // click of stone on stone
-    var nb = AC.createBuffer(1, 900, AC.sampleRate);
+    var nb = ctx2.createBuffer(1, 900, ctx2.sampleRate);
     var dd = nb.getChannelData(0);
     for (var i = 0; i < dd.length; i++) dd[i] = (Math.random() * 2 - 1) * (1 - i / dd.length);
-    var ns = AC.createBufferSource(); ns.buffer = nb;
-    var bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 750 + Math.random() * 350; bp.Q.value = 1.1;
-    var ng2 = AC.createGain(); ng2.gain.value = v * 0.8;
-    ns.connect(bp); bp.connect(ng2); ng2.connect(master); ns.start(t);
+    var ns = ctx2.createBufferSource(); ns.buffer = nb;
+    var bp = ctx2.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 750 + Math.random() * 350; bp.Q.value = 1.1;
+    var ng2 = ctx2.createGain(); ng2.gain.value = v * 0.8;
+    ns.connect(bp); bp.connect(ng2); ng2.connect(dest); ns.start(t);
   }
+  function knock(strength) {
+    if (!AC || !soundOn) return;
+    knockAt(AC, master, AC.currentTime, strength);
+  }
+  // offline render of the real mix, for verification: returns 16-bit mono WAV as base64
+  window.__cairnRender = function (kind, seconds) {
+    var sr = 22050;
+    var o = new OfflineAudioContext(1, Math.ceil(seconds * sr), sr);
+    var g2 = buildGraph(o);
+    g2.master.gain.value = 0.9;
+    if (kind === 'knock') {
+      knockAt(o, g2.master, 0.15, 0.85);
+      knockAt(o, g2.master, 0.9, 0.4);
+    } else {
+      g2.bowl.gain.setValueAtTime(0.0001, 0);
+      g2.bowl.gain.linearRampToValueAtTime(0.7, 0.8);
+      g2.bowl.gain.setTargetAtTime(0, 1.0, 1.2);
+    }
+    return o.startRendering().then(function (buf) {
+      var pcm = buf.getChannelData(0);
+      var n = pcm.length;
+      var out = new DataView(new ArrayBuffer(44 + n * 2));
+      function ws(off, str) { for (var i = 0; i < str.length; i++) out.setUint8(off + i, str.charCodeAt(i)); }
+      ws(0, 'RIFF'); out.setUint32(4, 36 + n * 2, true); ws(8, 'WAVE'); ws(12, 'fmt ');
+      out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 1, true);
+      out.setUint32(24, sr, true); out.setUint32(28, sr * 2, true); out.setUint16(32, 2, true);
+      out.setUint16(34, 16, true); ws(36, 'data'); out.setUint32(40, n * 2, true);
+      for (var i = 0; i < n; i++) {
+        var v = Math.max(-1, Math.min(1, pcm[i]));
+        out.setInt16(44 + i * 2, v < 0 ? v * 32768 : v * 32767, true);
+      }
+      var bytes = new Uint8Array(out.buffer), bin = '';
+      for (var j = 0; j < bytes.length; j += 8192) bin += String.fromCharCode.apply(null, bytes.subarray(j, j + 8192));
+      return btoa(bin);
+    });
+  };
   Matter.Events.on(engine, 'collisionStart', function (ev) {
     var pairs = ev.pairs;
     for (var i = 0; i < pairs.length; i++) {
