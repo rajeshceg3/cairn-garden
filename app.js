@@ -262,6 +262,10 @@
     }
   });
 
+  window.__cairn = function () {
+    return { audio: AC ? AC.state : 'not-created', stones: stones.length,
+             bowl: +bowlTarget.toFixed(3) };
+  };
   function setSound(on) {
     soundOn = on;
     soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
