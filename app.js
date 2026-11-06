@@ -324,7 +324,7 @@
     var c = skyCanvas.getContext('2d');
     var g = c.createLinearGradient(0, 0, 0, groundY);
     g.addColorStop(0, 'hsl(' + skyHue + ',38%,' + Math.round(13 * light) + '%)');
-    g.addColorStop(0.55, 'hsl(' + ((skyHue + dawnHue) / 2 + 340) % 360 + ',30%,' + Math.round(26 * light) + '%)');
+    g.addColorStop(0.55, 'hsl(' + Math.round(326 + skyRng() * 22) + ',30%,' + Math.round(27 * light) + '%)');
     g.addColorStop(1, 'hsl(' + dawnHue + ',48%,' + Math.round(46 * light) + '%)');
     c.fillStyle = g; c.fillRect(0, 0, W, H);
     // morning star, fades on some days
@@ -339,21 +339,24 @@
       rc.width = W; rc.height = H;
       var r = rc.getContext('2d');
       var rng = mulberry32(seed);
+      var ys = [];
+      for (var j = 0; j <= peaks; j++) ys.push(yBase - rng() * amp - Math.sin(j * 1.7 + (seed % 5)) * amp * 0.35);
       r.beginPath(); r.moveTo(-4, H);
-      r.lineTo(-4, yBase - rng() * amp);
-      for (var i = 0; i <= peaks; i++) {
-        var x = (i / peaks) * (W + 8) - 4;
-        var y = yBase - rng() * amp - Math.sin(i * 1.7 + seed % 5) * amp * 0.4;
-        r.quadraticCurveTo(x - (W / peaks) * 0.5, y - rng() * amp * 0.5, x, y);
+      r.lineTo(-4, ys[0]);
+      for (var i = 1; i <= peaks; i++) {
+        var x0 = ((i - 1) / peaks) * (W + 8) - 4, x1 = (i / peaks) * (W + 8) - 4;
+        var mx = (x0 + x1) / 2;
+        r.quadraticCurveTo(x0, ys[i - 1], mx, (ys[i - 1] + ys[i]) / 2);
       }
+      r.lineTo(W + 4, ys[peaks]);
       r.lineTo(W + 4, H); r.closePath();
       r.fillStyle = 'hsl(' + hue + ',' + sat + '%,' + li + '%)';
       r.fill();
       return rc;
     }
-    ridgeFar = ridge(4, groundY - H * 0.30, H * 0.10, skyHue, 26, Math.round(24 * light), 11 + dayOfYear);
-    ridgeMid = ridge(5, groundY - H * 0.17, H * 0.09, skyHue, 22, Math.round(18 * light), 71 + dayOfYear);
-    ridgeNear = ridge(3, groundY - H * 0.065, H * 0.06, skyHue, 20, Math.round(14 * light), 131 + dayOfYear);
+    ridgeFar = ridge(6, groundY - H * 0.30, H * 0.10, skyHue, 26, Math.round(24 * light), 11 + dayOfYear);
+    ridgeMid = ridge(7, groundY - H * 0.17, H * 0.09, skyHue, 22, Math.round(18 * light), 71 + dayOfYear);
+    ridgeNear = ridge(5, groundY - H * 0.065, H * 0.06, skyHue, 20, Math.round(14 * light), 131 + dayOfYear);
 
     // paper grain
     grain = document.createElement('canvas');
@@ -384,8 +387,7 @@
     var sc = document.createElement('canvas');
     sc.width = w; sc.height = h;
     var c = sc.getContext('2d');
-    var cx = - (minX + maxX) / 2 + w / 2, cy = - (minY + maxY) / 2 + h / 2;
-    c.translate(cx, cy);
+    c.translate(w / 2, h / 2);
     var origin = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
     var cols = body.plugin.kind === 'dawn' ? DAWN_COLORS : STONE_COLORS[(body.plugin.seed >>> 3) % STONE_COLORS.length];
     var lg = c.createLinearGradient(0, minY - origin.y, 0, maxY - origin.y);
