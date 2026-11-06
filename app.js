@@ -88,10 +88,13 @@
     var wl = Matter.Bodies.rectangle(baseX - W * 0.75, groundY - 80, W, 140, { isStatic: true, angle: 0.55, friction: 0.9 });
     var wr = Matter.Bodies.rectangle(baseX + W * 0.75, groundY - 80, W, 140, { isStatic: true, angle: -0.55, friction: 0.9 });
     // cairn base slab
-    var base = Matter.Bodies.rectangle(baseX, groundY - 12, BASE_W, 26, {
-      isStatic: true, friction: 1.0, chamfer: { radius: 5 }, plugin: { base: true }
+    var baseL = Matter.Bodies.rectangle(baseX - 56, groundY - 12, 118, 24, {
+      isStatic: true, angle: 0.11, friction: 1.0, chamfer: { radius: 5 }, plugin: { base: true }
     });
-    statics.push(g1, wl, wr, base);
+    var baseR = Matter.Bodies.rectangle(baseX + 56, groundY - 12, 118, 24, {
+      isStatic: true, angle: -0.11, friction: 1.0, chamfer: { radius: 5 }, plugin: { base: true }
+    });
+    statics.push(g1, wl, wr, baseL, baseR);
     Matter.Composite.add(world, statics);
     // keep existing stones inside the new frame
     for (i = 0; i < stones.length; i++) {
@@ -163,8 +166,8 @@
   Matter.Events.on(engine, 'afterUpdate', function () {
     for (var i = 0; i < stones.length; i++) {
       var s = stones[i];
-      if (s.speed > 14) {
-        var k = 14 / s.speed;
+      if (s.speed > 10) {
+        var k = 10 / s.speed;
         Matter.Body.setVelocity(s, { x: s.velocity.x * k, y: s.velocity.y * k });
       }
     }
@@ -531,10 +534,15 @@
     ctx.save();
     ctx.fillStyle = 'hsl(' + skyHue + ',18%,20%)';
     ctx.strokeStyle = 'rgba(28,31,50,0.9)'; ctx.lineWidth = 1.6;
-    var bx = W / 2 - BASE_W / 2, by = groundY - 25;
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(bx, by, BASE_W, 26, 10); else ctx.rect(bx, by, BASE_W, 26);
-    ctx.fill(); ctx.stroke();
+    [-56, 56].forEach(function (off, idx) {
+      ctx.save();
+      ctx.translate(W / 2 + off, groundY - 12);
+      ctx.rotate(idx === 0 ? 0.11 : -0.11);
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(-59, -12, 118, 24, 8); else ctx.rect(-59, -12, 118, 24);
+      ctx.fill(); ctx.stroke();
+      ctx.restore();
+    });
     ctx.restore();
 
     // bowl rock + bowl
