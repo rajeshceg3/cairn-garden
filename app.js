@@ -170,6 +170,11 @@
         var k = 10 / s.speed;
         Matter.Body.setVelocity(s, { x: s.velocity.x * k, y: s.velocity.y * k });
       }
+      // cairn zone: deliberate placement over the dish settles instead of skidding
+      if (mouseConstraint.body !== s && Math.abs(s.position.x - W / 2) < 150 && s.position.y < groundY + 6 && s.speed > 0.2) {
+        Matter.Body.setVelocity(s, { x: s.velocity.x * 0.82, y: s.velocity.y * 0.97 });
+        Matter.Body.setAngularVelocity(s, s.angularVelocity * 0.85);
+      }
     }
   });
 
