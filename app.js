@@ -50,7 +50,7 @@
       store.stones = stones.map(function (s) {
         return { seed: s.plugin.seed, kind: s.plugin.kind, x: Math.round(s.position.x), y: Math.round(s.position.y), angle: +s.angle.toFixed(3) };
       });
-      store.visited = true;
+      store.visited = store.visited || firstStackDone;
       localStorage.setItem(STORE_KEY, JSON.stringify(store));
     } catch (e) { /* ignore */ }
   }
@@ -85,8 +85,8 @@
     var baseX = W / 2;
     // shallow valley: three static segments so runaway stones roll back toward the middle
     var g1 = Matter.Bodies.rectangle(baseX, groundY + 60, W * 2.4, 120, { isStatic: true, friction: 0.95 });
-    var wl = Matter.Bodies.rectangle(baseX - W * 0.72, groundY - 80, W, 140, { isStatic: true, angle: 0.5, friction: 0.9 });
-    var wr = Matter.Bodies.rectangle(baseX + W * 0.72, groundY - 80, W, 140, { isStatic: true, angle: -0.5, friction: 0.9 });
+    var wl = Matter.Bodies.rectangle(baseX - W * 0.85, groundY - 80, W, 140, { isStatic: true, angle: 0.5, friction: 0.9 });
+    var wr = Matter.Bodies.rectangle(baseX + W * 0.85, groundY - 80, W, 140, { isStatic: true, angle: -0.5, friction: 0.9 });
     // cairn base slab
     var base = Matter.Bodies.rectangle(baseX, groundY - 12, BASE_W, 26, {
       isStatic: true, friction: 1.0, chamfer: { radius: 10 }, plugin: { base: true }
@@ -149,7 +149,7 @@
     if (pileCount() >= 3 || t < respawnAt) return;
     respawnAt = t + 1800;
     var seed = (Math.random() * 1e9) | 0;
-    makeStone(seed, 'plain', 60 + Math.random() * (W * 0.2), groundY - 30);
+    makeStone(seed, 'plain', 90 + Math.random() * (W * 0.18), groundY - 30);
   }
 
   // ---------- input: drag stones ----------
@@ -336,20 +336,21 @@
 
     function ridge(peaks, yBase, amp, hue, sat, li, seed) {
       var rc = document.createElement('canvas');
-      rc.width = W; rc.height = H;
+      var W2 = W + 80;
+      rc.width = W2; rc.height = H;
       var r = rc.getContext('2d');
       var rng = mulberry32(seed);
       var ys = [];
       for (var j = 0; j <= peaks; j++) ys.push(yBase - rng() * amp - Math.sin(j * 1.7 + (seed % 5)) * amp * 0.35);
-      r.beginPath(); r.moveTo(-4, H);
-      r.lineTo(-4, ys[0]);
+      r.beginPath(); r.moveTo(0, H);
+      r.lineTo(0, ys[0]);
       for (var i = 1; i <= peaks; i++) {
-        var x0 = ((i - 1) / peaks) * (W + 8) - 4, x1 = (i / peaks) * (W + 8) - 4;
+        var x0 = ((i - 1) / peaks) * W2, x1 = (i / peaks) * W2;
         var mx = (x0 + x1) / 2;
         r.quadraticCurveTo(x0, ys[i - 1], mx, (ys[i - 1] + ys[i]) / 2);
       }
-      r.lineTo(W + 4, ys[peaks]);
-      r.lineTo(W + 4, H); r.closePath();
+      r.lineTo(W2, ys[peaks]);
+      r.lineTo(W2, H); r.closePath();
       r.fillStyle = 'hsl(' + hue + ',' + sat + '%,' + li + '%)';
       r.fill();
       return rc;
@@ -437,7 +438,7 @@
   if (store.stones.length) {
     store.stones.forEach(function (s) { makeStone(s.seed, s.kind, s.x, s.y); });
   } else {
-    for (var i = 0; i < 3; i++) makeStone(1000 + i * 37, 'plain', 60 + i * 52, groundY - 30 - (i % 2) * 20);
+    for (var i = 0; i < 3; i++) makeStone(1000 + i * 37, 'plain', 96 + i * 56, groundY - 30 - (i % 2) * 20);
   }
   var dawnPending = store.lastDawn !== todayStr();
   if (dawnPending) {
@@ -495,9 +496,9 @@
     // sky
     ctx.drawImage(skyCanvas, 0, 0);
     // ridges with parallax
-    ctx.drawImage(ridgeFar, -10 + parX * -5, 0);
-    ctx.drawImage(ridgeMid, -12 + parX * -9, 0);
-    ctx.drawImage(ridgeNear, -14 + parX * -14, 0);
+    ctx.drawImage(ridgeFar, -40 + parX * -5, 0);
+    ctx.drawImage(ridgeMid, -40 + parX * -9, 0);
+    ctx.drawImage(ridgeNear, -40 + parX * -14, 0);
 
     // ground band
     var gg = ctx.createLinearGradient(0, groundY - 30, 0, H);
@@ -512,12 +513,12 @@
     // mist band above the ground line
     if (!reducedMotion) {
       ctx.save();
-      ctx.globalAlpha = 0.10;
+      ctx.globalAlpha = 0.07;
       ctx.fillStyle = '#e9e4da';
       for (var i = 0; i < 3; i++) {
         var mx = ((mistDrift * (0.4 + i * 0.2) + i * W * 0.45) % (W + 320)) - 160;
         ctx.beginPath();
-        ctx.ellipse(mx, groundY - 40 - i * 26, 170, 16 + i * 5, 0, 0, 7);
+        ctx.ellipse(mx, groundY - 40 - i * 26, 210, 12 + i * 4, 0, 0, 7);
         ctx.fill();
       }
       ctx.restore();
