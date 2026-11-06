@@ -65,7 +65,7 @@
     canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    groundY = Math.round(H * 0.84);
+    groundY = Math.round(H * (W < 600 ? 0.80 : 0.84));
     rebuildWorld();
     buildScenery();
   }
@@ -288,9 +288,8 @@
   // ---------- singing bowl ----------
   var bowl = { x: 0, y: 0, r: 40 };
   function bowlLayout() {
-    bowl.x = Math.min(W - 92, W * 0.78);
-    bowl.y = groundY - 58;
-    bowl.r = Math.max(30, Math.min(44, W * 0.055));
+    if (W < 600) { bowl.x = W - 62; bowl.y = groundY - 40; bowl.r = 30; }
+    else { bowl.x = Math.min(W - 92, W * 0.78); bowl.y = groundY - 58; bowl.r = Math.max(34, Math.min(44, W * 0.055)); }
   }
   var singing = false, singPointer = null, lastAngle = 0, bowlTarget = 0;
   function angleAround(x, y) { return Math.atan2(y - bowl.y, x - bowl.x); }
@@ -517,9 +516,9 @@
     // mist band above the ground line
     if (!reducedMotion) {
       ctx.save();
-      ctx.globalAlpha = 0.07;
+      ctx.globalAlpha = W < 600 ? 0.05 : 0.07;
       ctx.fillStyle = '#e9e4da';
-      for (var i = 0; i < 3; i++) {
+      for (var i = 0; i < (W < 600 ? 2 : 3); i++) {
         var mx = ((mistDrift * (0.4 + i * 0.2) + i * W * 0.45) % (W + 320)) - 160;
         ctx.beginPath();
         ctx.ellipse(mx, groundY - 40 - i * 26, 210, 12 + i * 4, 0, 0, 7);
