@@ -184,7 +184,12 @@
   // so captured output is the real production mix
   function buildGraph(ctx2) {
     var g2 = {};
-    g2.master = ctx2.createGain(); g2.master.gain.value = 0; g2.master.connect(ctx2.destination);
+    g2.master = ctx2.createGain(); g2.master.gain.value = 0;
+    // safety limiter so bowl swell + knocks can never hard-clip
+    var comp = ctx2.createDynamicsCompressor();
+    comp.threshold.value = -9; comp.knee.value = 6; comp.ratio.value = 12;
+    comp.attack.value = 0.003; comp.release.value = 0.25;
+    g2.master.connect(comp); comp.connect(ctx2.destination);
     // singing bowl: fundamental + inharmonic partials, always running, gated by bowlGain
     g2.bowl = ctx2.createGain(); g2.bowl.gain.value = 0; g2.bowl.connect(g2.master);
     [[196.0, 1.0], [196.0 * 2.72, 0.38], [196.0 * 5.41, 0.13]].forEach(function (p) {
