@@ -76,7 +76,7 @@
   var world = engine.world;
   var stones = [];      // dynamic stone bodies
   var statics = [];     // ground / base / walls
-  var BASE_W = 150;
+  var BASE_W = 210;
 
   function rebuildWorld() {
     var i;
@@ -85,11 +85,11 @@
     var baseX = W / 2;
     // shallow valley: three static segments so runaway stones roll back toward the middle
     var g1 = Matter.Bodies.rectangle(baseX, groundY + 60, W * 2.4, 120, { isStatic: true, friction: 0.95 });
-    var wl = Matter.Bodies.rectangle(baseX - W * 0.85, groundY - 80, W, 140, { isStatic: true, angle: 0.5, friction: 0.9 });
-    var wr = Matter.Bodies.rectangle(baseX + W * 0.85, groundY - 80, W, 140, { isStatic: true, angle: -0.5, friction: 0.9 });
+    var wl = Matter.Bodies.rectangle(baseX - W * 0.75, groundY - 80, W, 140, { isStatic: true, angle: 0.55, friction: 0.9 });
+    var wr = Matter.Bodies.rectangle(baseX + W * 0.75, groundY - 80, W, 140, { isStatic: true, angle: -0.55, friction: 0.9 });
     // cairn base slab
     var base = Matter.Bodies.rectangle(baseX, groundY - 12, BASE_W, 26, {
-      isStatic: true, friction: 1.0, chamfer: { radius: 10 }, plugin: { base: true }
+      isStatic: true, friction: 1.0, chamfer: { radius: 5 }, plugin: { base: true }
     });
     statics.push(g1, wl, wr, base);
     Matter.Composite.add(world, statics);
@@ -163,8 +163,8 @@
   Matter.Events.on(engine, 'afterUpdate', function () {
     for (var i = 0; i < stones.length; i++) {
       var s = stones[i];
-      if (s.speed > 26) {
-        var k = 26 / s.speed;
+      if (s.speed > 14) {
+        var k = 14 / s.speed;
         Matter.Body.setVelocity(s, { x: s.velocity.x * k, y: s.velocity.y * k });
       }
     }
