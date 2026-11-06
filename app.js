@@ -140,16 +140,16 @@
     var n = 0;
     for (var i = 0; i < stones.length; i++) {
       var s = stones[i];
-      if (s.position.y > groundY - 46 && s.position.x < W * 0.38) n++;
+      if (s.position.y > groundY - 60 && s.position.x < Math.max(W * 0.38, 230)) n++;
     }
     return n;
   }
   var respawnAt = 0;
   function maybeRespawnPile(t) {
-    if (pileCount() >= 3 || t < respawnAt) return;
+    if (pileCount() >= 3 || stones.length >= 12 || t < respawnAt) return;
     respawnAt = t + 1800;
     var seed = (Math.random() * 1e9) | 0;
-    makeStone(seed, 'plain', 90 + Math.random() * (W * 0.18), groundY - 30);
+    makeStone(seed, 'plain', 90 + Math.random() * Math.min(W * 0.18, 110), groundY - 30);
   }
 
   // ---------- input: drag stones ----------
