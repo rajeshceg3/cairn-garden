@@ -274,6 +274,14 @@
     if (kind === 'knock') {
       knockAt(o, g2.master, 0.15, 0.85);
       knockAt(o, g2.master, 0.9, 0.4);
+    } else if (kind === 'mix') {
+      // worst case: bowl at full swell with knocks landing on top
+      g2.bowl.gain.setValueAtTime(0.0001, 0);
+      g2.bowl.gain.linearRampToValueAtTime(0.7, 0.8);
+      g2.bowl.gain.setTargetAtTime(0, 1.6, 1.2);
+      knockAt(o, g2.master, 0.9, 0.9);
+      knockAt(o, g2.master, 1.1, 0.9);
+      knockAt(o, g2.master, 1.3, 0.9);
     } else {
       g2.bowl.gain.setValueAtTime(0.0001, 0);
       g2.bowl.gain.linearRampToValueAtTime(0.7, 0.8);
